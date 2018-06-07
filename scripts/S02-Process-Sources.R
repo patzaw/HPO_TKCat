@@ -101,6 +101,34 @@ HPO_diseaseHP <- unique(hpd[,c(1, 2, 5)])
 colnames(HPO_diseaseHP) <- c("db", "id", "hp")
 HPO_diseaseHP$hp <- sub("^HP[:]", "", HPO_diseaseHP$hp)
 
+diseases <- unique(hpd[,1:3])
+HPO_diseaseSynonyms <- do.call(rbind, apply(
+   diseases, 1,
+   function(x){
+      names(x) <- c()
+      syns <- unlist(strsplit(x[3], split=";;"))
+      syns <- sub(
+         paste0('^ *[%#]?', x[2], ' +'),
+         "",
+         syns
+      )
+      pref <- c(TRUE, rep(FALSE, length(syns)-1))
+      toRet <- data.frame(
+         db=x[1],
+         id=x[2],
+         synonym=syns,
+         preferred=pref,
+         stringsAsFactors=FALSE
+      )
+      return(toRet)
+   }
+))
+HPO_diseases <- HPO_diseaseSynonyms[
+   which(HPO_diseaseSynonyms$preferred),
+   c("db", "id", "synonym")
+]
+colnames(HPO_diseases) <- c("db", "id", "label")
+
 ###############################################################################@
 ## Writing tables ----
 ###############################################################################@
