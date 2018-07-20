@@ -145,7 +145,8 @@ for(f in toSave){
       file=file.path(ddir, paste(f, ".txt", sep="")),
       sep="\t",
       row.names=FALSE, col.names=TRUE,
-      quote=FALSE
+      quote=TRUE,
+	  qmethod="double"
    )
 }
 message(Sys.time())
