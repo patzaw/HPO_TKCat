@@ -1,8 +1,10 @@
-setwd("~/Shared/Data-Science/Data-Source-Model-Repository/HPO/scripts/")
+library(here)
 
 ##
-sdir <- "../sources"
-ddir <- "../data"
+sdir <- here("sources")
+ddir <- here("data")
+
+source(here("../00-Utils/writeLastUpdate.R"))
 
 ###############################################################################@
 ## Source information ----
@@ -68,12 +70,18 @@ hpDef <- do.call(rbind, apply(
    }
 ))
 altId <- unique(hpDef[, c("id", "altId")])
-hpDef <- hpDef[, setdiff(colnames(hpDef), "altId")]
+hpDef <- unique(hpDef[, setdiff(colnames(hpDef), "altId")])
 
-HPO_hp <- hpDef
-colnames(HPO_hp) <- c("id", "name", "description", "parent")
+## * Main HP table ----
+HPO_hp <- hpDef[,c("id", "name", "def")]
+colnames(HPO_hp) <- c("id", "name", "description")
 HPO_hp$id <- sub("^HP[:]", "", HPO_hp$id)
-HPO_hp$parent <- sub("^HP[:]", "", HPO_hp$parent)
+
+## * Parents ----
+HPO_parents <- hpDef[which(!is.na(hpDef$parent)),c("id", "parent")]
+colnames(HPO_parents) <- c("id", "parent")
+HPO_parents$id <- sub("^HP[:]", "", as.character(HPO_parents$id))
+HPO_parents$parent <- sub("^HP[:]", "", as.character(HPO_parents$parent))
 
 ## * Alternative ID ----
 altIdList <- strsplit(altId$altId, ", ")
@@ -85,6 +93,42 @@ altId$alt <- as.character(altId$alt)
 HPO_altId <- altId
 HPO_altId$alt <- sub("^HP[:]", "", HPO_altId$alt)
 HPO_altId$id <- sub("^HP[:]", "", HPO_altId$id)
+
+## * Ancestors/Descendants ----
+getAncestors <- function(id){
+   direct <- termParents[[id]]
+   parents <- direct
+   level <- 0
+   dLev <- c()
+   for(d in direct){
+      dPar <- getAncestors(d)
+      dLev <- c(dLev, dPar$level)
+      parents <- c(parents, dPar$parents)
+   }
+   if(length(dLev)>0){
+      level <- max(dLev)+1
+   }
+   return(list(parents=unique(parents), level=level))
+}
+
+termParents <- split(HPO_parents$parent, HPO_parents$id)
+termAncestors <- lapply(
+   unique(HPO_hp$id),
+   getAncestors
+)
+names(termAncestors) <- unique(HPO_hp$id)
+HPO_hp$level <- unlist(lapply(termAncestors, function(x) x$level))[HPO_hp$id]
+termAncestors <- lapply(termAncestors, function(x) x$parents)
+termAncestors <- termAncestors[HPO_hp$id]
+##
+HPO_descendants <- stack(termAncestors)
+HPO_descendants$values <- as.character(HPO_descendants$values)
+HPO_descendants$ind <- as.character(HPO_descendants$ind)
+HPO_descendants <- rbind(
+   HPO_descendants,
+   data.frame(values=names(termAncestors), ind=names(termAncestors))
+)
+colnames(HPO_descendants) <- c("id", "descendant")
 
 ###############################################################################@
 ## Data from phenotype_annotation.tab ----
@@ -138,7 +182,6 @@ message(Sys.time())
 toSave <- grep("^HPO[_]", ls(), value=T)
 for(f in toSave){
    message(paste("   Writing", f))
-   ## Ensure unicity
    toWrite <- get(f)
    write.table(
       get(f),
@@ -151,3 +194,5 @@ for(f in toSave){
 }
 message(Sys.time())
 message("... Done\n")
+
+writeLastUpdate()

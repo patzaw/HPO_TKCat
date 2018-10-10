@@ -1,9 +1,9 @@
-setwd("~/Shared/Data-Science/Data-Source-Model-Repository/HPO/scripts/")
-
+library(here)
 library(RJSONIO)
-source("../../00-Utils/downloadSourceFiles.R")
 
-desc <- readJSONStream("../DESCRIPTION.json")
+source(here("../00-Utils/downloadSourceFiles.R"))
+
+desc <- readJSONStream(here("DESCRIPTION.json"))
 
 sourceFiles <- desc$"source files"
 urls <- unlist(lapply(
