@@ -1,5 +1,5 @@
 library(here)
-
+library(stringr)
 ##
 sdir <- here("sources")
 ddir <- here("data")
@@ -47,6 +47,10 @@ hpDef <- do.call(rbind, apply(
       name <- sub(fn, "", grep(fn, termDesc, value=T))
       if(length(name)==0) name <- NA
       ##
+      fn <- "^synonym: "
+      syn <- sub(fn, "", grep(fn, termDesc, value=T))
+      if(length(syn)==0) syn <- NA
+      ##
       fn <- "^def: "
       def <- sub(fn, "", grep(fn, termDesc, value=T))
       if(length(def)==0) def <- NA
@@ -56,13 +60,14 @@ hpDef <- do.call(rbind, apply(
       fn <- " [!].*$"
       parent <- sub(fn, "", parent)
       if(length(parent)==0) parent <- NA
+      parent <- paste(unique(c(id, parent)), collapse=", ")
       ##
       fn <- "^alt_id: "
       altId <- sub(fn, "", grep(fn, termDesc, value=T))
       altId <- paste(unique(c(id, altId)), collapse=", ")
       ##
       return(data.frame(
-         id=id, name=name, def=def,
+         id=id, name=name, syn = syn, def=def,
          parent=parent,
          altId=altId,
          stringsAsFactors=F)
@@ -70,16 +75,37 @@ hpDef <- do.call(rbind, apply(
    }
 ))
 altId <- unique(hpDef[, c("id", "altId")])
-hpDef <- unique(hpDef[, setdiff(colnames(hpDef), "altId")])
+parentId <- unique(hpDef[,c("id","parent")])
+hpDef <- unique(hpDef[, setdiff(colnames(hpDef), c("parentId","altId"))])
 
 ## * Main HP table ----
-HPO_hp <- hpDef[,c("id", "name", "def")]
+HPO_hp <- unique(hpDef[,c("id", "name", "def")])
 colnames(HPO_hp) <- c("id", "name", "description")
 HPO_hp$id <- sub("^HP[:]", "", HPO_hp$id)
+HPO_hp$description <- gsub("\"","'", HPO_hp$description)
+HPO_hp$description <- gsub("\\\\", "", HPO_hp$description)
+HPO_hp$description <- gsub(paste("\t","\n","\r", sep = "|"), " ", HPO_hp$description)
+table(unlist(sapply(HPO_hp$description, strsplit, split = "")))
+
+## * Synonyms ----
+HPO_synonym <- hpDef[,c("id","syn")]
+HPO_synonym$syn <- gsub('\"','', str_match(string = HPO_synonym$syn, pattern = '\".*\"'))
+HPO_synonym$syn <- gsub(paste("\t","\n","\r","\\\\", sep = "|"), " ", HPO_synonym$syn)
+HPO_synonym <- HPO_synonym[!is.na(HPO_synonym$syn),]
+table(unlist(sapply(HPO_synonym$syn, strsplit, split = "")))
 
 ## * Parents ----
-HPO_parents <- hpDef[which(!is.na(hpDef$parent)),c("id", "parent")]
-colnames(HPO_parents) <- c("id", "parent")
+parentList <- strsplit(parentId$parent, ", ")
+names(parentList) <- parentId$id
+parentId <- stack(parentList)
+colnames(parentId) <- c("parent", "id")
+parentId$id <- as.character(parentId$id)
+parentId$parent <- as.character(parentId$parent)
+parentId <- parentId[!parentId$parent == "NA",]
+parentId <- parentId[!parentId$parent == parentId$id,]
+HPO_parents <- parentId
+# HPO_parents <- hpDef[which(!is.na(hpDef$parent)),c("id", "parent")]
+# colnames(HPO_parents) <- c("id", "parent")
 HPO_parents$id <- sub("^HP[:]", "", as.character(HPO_parents$id))
 HPO_parents$parent <- sub("^HP[:]", "", as.character(HPO_parents$parent))
 
@@ -90,6 +116,7 @@ altId <- stack(altIdList)
 colnames(altId) <- c("alt", "id")
 altId$id <- as.character(altId$id)
 altId$alt <- as.character(altId$alt)
+altId <- altId[!altId$alt == altId$id,]
 HPO_altId <- altId
 HPO_altId$alt <- sub("^HP[:]", "", HPO_altId$alt)
 HPO_altId$id <- sub("^HP[:]", "", HPO_altId$id)
@@ -196,3 +223,7 @@ message(Sys.time())
 message("... Done\n")
 
 writeLastUpdate()
+
+###########################################################################@
+## Check model
+source("../00-Utils/autoCheckModel.R")
