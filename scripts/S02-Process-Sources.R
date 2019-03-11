@@ -1,5 +1,5 @@
 library(here)
-library(stringr)
+library(tidyverse)
 ##
 sdir <- here("sources")
 ddir <- here("data")
@@ -10,30 +10,34 @@ source(here("../00-Utils/writeLastUpdate.R"))
 ## Source information ----
 ###############################################################################@
 
-sfi <- read.table(
-   file.path(sdir, "ARCHIVES/ARCHIVES.txt"),
-   sep="\t",
-   header=T,
-   stringsAsFactors=FALSE
+sfi <- read_tsv(
+   file.path(sdir, "ARCHIVES/ARCHIVES.txt")
 )
-HPO_sourceFiles <- sfi[which(sfi$inUse),]
+HPO_sourceFiles <- sfi %>%
+   filter(inUse) %>%
+   mutate(current=current %>% as.Date() %>% as.character())
 
 ###############################################################################@
 ## Data from hp.obo ----
 ###############################################################################@
 
-## * Current update ----
 obo <- readLines(file.path(sdir, "hp.obo"))
-oboDate <- format(as.POSIXct(as.Date(
-   sub("^.*[/]", "", grep("^data[-]version[:]", obo, value=TRUE))
-)))
-HPO_sourceFiles[which(HPO_sourceFiles$file=="hp.obo"), "current"] <- oboDate
-HPO_sourceFiles <- HPO_sourceFiles[,c("url", "current")]
 
-## * Basic information ----
+## _+ Current update ----
+oboDate <- grep("^data[-]version[:]", obo, value=TRUE) %>%
+   str_remove("^.*[/]") %>%
+   as.Date() %>%
+   as.POSIXct() %>%
+   as.Date() %>%
+   as.character()
+HPO_sourceFiles[which(HPO_sourceFiles$file=="hp.obo"), "current"] <- oboDate
+HPO_sourceFiles <- HPO_sourceFiles %>%
+   select(url, current)
+
+## _+ Basic information ----
 starts <- which(obo=="[Term]")
 ends <- c(starts[-1]-1, length(obo))
-hpDef <- do.call(rbind, apply(
+hpDef <- do.call(bind_rows, apply(
    data.frame(starts, ends),
    1,
    function(x){
@@ -66,62 +70,82 @@ hpDef <- do.call(rbind, apply(
       altId <- sub(fn, "", grep(fn, termDesc, value=T))
       altId <- paste(unique(c(id, altId)), collapse=", ")
       ##
-      return(data.frame(
+      return(tibble(
          id=id, name=name, syn = syn, def=def,
          parent=parent,
-         altId=altId,
-         stringsAsFactors=F)
-      )
+         altId=altId
+      ))
    }
 ))
-altId <- unique(hpDef[, c("id", "altId")])
-parentId <- unique(hpDef[,c("id","parent")])
-hpDef <- unique(hpDef[, setdiff(colnames(hpDef), c("parentId","altId"))])
+altId <- hpDef %>%
+   select(id, altId) %>%
+   unique()
+parentId <- hpDef %>%
+   select(id, parent) %>%
+   unique()
+hpDef <- hpDef %>%
+   select(-parent, -altId) %>%
+   unique()
 
-## * Main HP table ----
-HPO_hp <- unique(hpDef[,c("id", "name", "def")])
-colnames(HPO_hp) <- c("id", "name", "description")
-HPO_hp$id <- sub("^HP[:]", "", HPO_hp$id)
-HPO_hp$description <- gsub("\"","'", HPO_hp$description)
-HPO_hp$description <- gsub("\\\\", "", HPO_hp$description)
-HPO_hp$description <- gsub(paste("\t","\n","\r", sep = "|"), " ", HPO_hp$description)
-table(unlist(sapply(HPO_hp$description, strsplit, split = "")))
+## _+ Main HP table ----
+HPO_hp <- hpDef %>%
+   select(id, name, def) %>%
+   unique() %>%
+   rename("description"="def") %>%
+   mutate(
+      id=id %>% str_remove("^HP[:]"),
+      description=description %>%
+         str_replace_all("\t|\n|\r|\\\\", " ") %>%
+         str_remove('" [^"]*$') %>%
+         str_remove("^\"")
+   )
 
-## * Synonyms ----
-HPO_synonym <- hpDef[,c("id","syn")]
-HPO_synonym$syn <- gsub('\"','', str_match(string = HPO_synonym$syn, pattern = '\".*\"'))
-HPO_synonym$syn <- gsub(paste("\t","\n","\r","\\\\", sep = "|"), " ", HPO_synonym$syn)
-HPO_synonym <- HPO_synonym[!is.na(HPO_synonym$syn),]
-table(unlist(sapply(HPO_synonym$syn, strsplit, split = "")))
+## _+ Synonyms ----
+HPO_synonyms <- hpDef %>%
+   select(id, syn) %>%
+   unique() %>%
+   mutate(
+      id=id %>% str_remove("^HP[:]"),
+      type = syn %>% str_remove('^.*" ') %>% str_remove(' .*$'),
+      syn = syn %>%
+         str_replace_all("\t|\n|\r|\\\\", " ") %>%
+         str_remove('" [^"]*$') %>%
+         str_remove('^"')
+   ) %>%
+   filter(!is.na(syn)) %>%
+   rename("synonym"="syn")
 
-## * Parents ----
+## _+ Parents ----
 parentList <- strsplit(parentId$parent, ", ")
 names(parentList) <- parentId$id
-parentId <- stack(parentList)
-colnames(parentId) <- c("parent", "id")
-parentId$id <- as.character(parentId$id)
-parentId$parent <- as.character(parentId$parent)
-parentId <- parentId[!parentId$parent == "NA",]
-parentId <- parentId[!parentId$parent == parentId$id,]
-HPO_parents <- parentId
-# HPO_parents <- hpDef[which(!is.na(hpDef$parent)),c("id", "parent")]
-# colnames(HPO_parents) <- c("id", "parent")
-HPO_parents$id <- sub("^HP[:]", "", as.character(HPO_parents$id))
-HPO_parents$parent <- sub("^HP[:]", "", as.character(HPO_parents$parent))
+HPO_parents <- stack(parentList) %>%
+   as_tibble() %>%
+   rename("parent"="values", "id"="ind") %>%
+   mutate(
+      parent = parent %>% as.character() %>% str_remove("^HP[:]"),
+      id = id %>% as.character() %>% str_remove("^HP[:]")
+   ) %>%
+   filter(
+      !is.na(parent) & parent!="NA" & !is.na(id) & id!="NA" & id!=parent
+   ) %>%
+   select(id, parent)
 
-## * Alternative ID ----
+## _+ Alternative ID ----
 altIdList <- strsplit(altId$altId, ", ")
 names(altIdList) <- altId$id
-altId <- stack(altIdList)
-colnames(altId) <- c("alt", "id")
-altId$id <- as.character(altId$id)
-altId$alt <- as.character(altId$alt)
-altId <- altId[!altId$alt == altId$id,]
-HPO_altId <- altId
-HPO_altId$alt <- sub("^HP[:]", "", HPO_altId$alt)
-HPO_altId$id <- sub("^HP[:]", "", HPO_altId$id)
+HPO_altId <- stack(altIdList) %>%
+   as_tibble() %>%
+   rename("alt"="values", "id"="ind") %>%
+   mutate(
+      alt = alt %>% as.character() %>% str_remove("^HP[:]"),
+      id = id %>% as.character() %>% str_remove("^HP[:]")
+   ) %>%
+   filter(
+      !is.na(alt) & alt!="NA" & !is.na(id) & id!="NA" & id!=alt
+   ) %>%
+   select(id, alt)
 
-## * Ancestors/Descendants ----
+## _+ Ancestors/Descendants ----
 getAncestors <- function(id){
    direct <- termParents[[id]]
    parents <- direct
@@ -144,86 +168,94 @@ termAncestors <- lapply(
    getAncestors
 )
 names(termAncestors) <- unique(HPO_hp$id)
-HPO_hp$level <- unlist(lapply(termAncestors, function(x) x$level))[HPO_hp$id]
+
+HPO_hp <- HPO_hp %>%
+   mutate(
+      level=unlist(lapply(termAncestors, function(x) x$level))[HPO_hp$id]
+   )
+
 termAncestors <- lapply(termAncestors, function(x) x$parents)
 termAncestors <- termAncestors[HPO_hp$id]
-##
-HPO_descendants <- stack(termAncestors)
-HPO_descendants$values <- as.character(HPO_descendants$values)
-HPO_descendants$ind <- as.character(HPO_descendants$ind)
-HPO_descendants <- rbind(
-   HPO_descendants,
-   data.frame(values=names(termAncestors), ind=names(termAncestors))
-)
-colnames(HPO_descendants) <- c("id", "descendant")
+HPO_descendants <- stack(termAncestors) %>%
+   as_tibble() %>%
+   mutate_all(as.character) %>%
+   bind_rows(
+      tibble(values=names(termAncestors), ind=names(termAncestors))
+   ) %>%
+   rename(
+      "id"="values", "descendant"="ind"
+   )
 
 ###############################################################################@
 ## Data from phenotype_annotation.tab ----
 ###############################################################################@
 
-hpd <- read.table(
+hpd <- read_tsv(
    file=file.path(sdir, "phenotype_annotation.tab"),
-   header=FALSE,
-   quote="", comment="",
-   sep="\t",
-   stringsAsFactors=F
+   col_names=FALSE
 )
-HPO_diseaseHP <- unique(hpd[,c(1, 2, 5)])
-colnames(HPO_diseaseHP) <- c("db", "id", "hp")
-HPO_diseaseHP$hp <- sub("^HP[:]", "", HPO_diseaseHP$hp)
 
+## _+ diseaseHP ----
+HPO_diseaseHP <- hpd %>%
+   select(X1, X2, X5) %>%
+   rename("db"="X1", "id"="X2", "hp"="X5") %>%
+   mutate(
+      id=id %>% as.character(),
+      hp=hp %>% str_remove("^HP[:]")
+   )
+   
+   HPO_diseaseHP$hp <- sub("^HP[:]", "", HPO_diseaseHP$hp)
+   
+## _+ diseaseSynonyms ----
 diseases <- unique(hpd[,1:3])
-HPO_diseaseSynonyms <- do.call(rbind, apply(
-   diseases, 1,
-   function(x){
-      names(x) <- c()
-      syns <- unlist(strsplit(x[3], split=";;"))
-      syns <- sub(
-         paste0('^ *[%#]?', x[2], ' +'),
-         "",
-         syns
-      )
-      pref <- c(TRUE, rep(FALSE, length(syns)-1))
-      toRet <- data.frame(
-         db=x[1],
-         id=x[2],
-         synonym=syns,
-         preferred=pref,
-         stringsAsFactors=FALSE
-      )
-      return(toRet)
-   }
-))
-HPO_diseases <- HPO_diseaseSynonyms[
-   which(HPO_diseaseSynonyms$preferred),
-   c("db", "id", "synonym")
-]
-colnames(HPO_diseases) <- c("db", "id", "label")
+
+HPO_diseaseSynonyms <- hpd %>%
+   select(X1, X2, X3) %>%
+   apply(
+      1, function(x){
+         names(x) <- c()
+         syns <- unlist(strsplit(x[3], split=";;"))
+         syns <- sub(
+            paste0('^ *[%#]?', x[2], ' +'),
+            "",
+            syns
+         )
+         pref <- c(TRUE, rep(FALSE, length(syns)-1))
+         toRet <- tibble(
+            db=x[1],
+            id=x[2] %>% str_remove_all(" "),
+            synonym=syns,
+            preferred=pref
+         )
+         return(toRet)
+      }
+   ) %>%
+   bind_rows() %>%
+   unique()
+
+## _+ Diseases
+HPO_diseases <- HPO_diseaseSynonyms %>%
+   filter(preferred) %>%
+   select(db, id, synonym) %>%
+   rename("label"="synonym") %>%
+   unique()
 
 ###############################################################################@
 ## Writing tables ----
 ###############################################################################@
+
 
 message("Writing tables...")
 message(Sys.time())
 toSave <- grep("^HPO[_]", ls(), value=T)
 for(f in toSave){
    message(paste("   Writing", f))
-   toWrite <- get(f)
-   write.table(
+   write_tsv(
       get(f),
-      file=file.path(ddir, paste(f, ".txt", sep="")),
-      sep="\t",
-      row.names=FALSE, col.names=TRUE,
-      quote=TRUE,
-	  qmethod="double"
+      path=file.path(ddir, paste(f, ".txt", sep=""))
    )
 }
 message(Sys.time())
 message("... Done\n")
 
 writeLastUpdate()
-
-###########################################################################@
-## Check model
-source("../00-Utils/autoCheckModel.R")

@@ -14,6 +14,6 @@ urls <- unlist(lapply(
       return(toRet)
    }
 ))
-srcDir <- "../sources"
+srcDir <- here("sources")
 
 downloadSourceFiles(urls, srcDir)
