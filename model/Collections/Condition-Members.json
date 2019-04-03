@@ -1,0 +1,32 @@
+{
+	"collection":"Condition",
+	"resource":"HPO",
+	"tables":[
+		{
+			"name":"HPO_hp",
+			"fields":{
+				"source": {
+					"static":true,
+					"value":"HP"
+				},
+				"identifier": {
+					"static":false,
+					"value":"id"
+				}
+			}
+		},
+		{
+			"name":"HPO_diseases",
+			"fields":{
+				"source": {
+					"static":false,
+					"value":"db"
+				},
+				"identifier": {
+					"static":false,
+					"value":"id"
+				}
+			}
+		}
+	]
+}
