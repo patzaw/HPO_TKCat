@@ -98,7 +98,8 @@ HPO_hp <- hpDef %>%
          str_replace_all("\t|\n|\r|\\\\", " ") %>%
          str_remove('" [^"]*$') %>%
          str_remove("^\"")
-   )
+   ) %>%
+   filter(which(!duplicated(id)))
 
 ## _+ Synonyms ----
 HPO_synonyms <- hpDef %>%
@@ -247,6 +248,8 @@ HPO_diseases <- HPO_diseaseSynonyms %>%
 
 message("Writing tables...")
 message(Sys.time())
+file.rename(ddir, paste0(ddir, "_BCK_", Sys.Date()))
+dir.create(ddir)
 toSave <- grep("^HPO[_]", ls(), value=T)
 for(f in toSave){
    message(paste("   Writing", f))

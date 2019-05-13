@@ -1,6 +1,6 @@
 .Rproj*
 *.Rproj
 .Rproj.user
-data
+data*
 sources
 *.mwb.bak
