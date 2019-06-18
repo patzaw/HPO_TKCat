@@ -99,7 +99,7 @@ HPO_hp <- hpDef %>%
          str_remove('" [^"]*$') %>%
          str_remove("^\"")
    ) %>%
-   filter(which(!duplicated(id)))
+   filter(!duplicated(id))
 
 ## _+ Synonyms ----
 HPO_synonyms <- hpDef %>%
