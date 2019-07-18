@@ -193,6 +193,7 @@ HPO_descendants <- stack(termAncestors) %>%
 
 hpd <- read_tsv(
    file=file.path(sdir, "phenotype_annotation.tab"),
+   col_types=paste(rep("c", 14), collapse=""),
    col_names=FALSE
 )
 
@@ -201,7 +202,7 @@ HPO_diseaseHP <- hpd %>%
    select(X1, X2, X5) %>%
    rename("db"="X1", "id"="X2", "hp"="X5") %>%
    mutate(
-      id=id %>% as.character(),
+      # id=id %>% as.character(),
       hp=hp %>% str_remove("^HP[:]")
    )
    
