@@ -191,10 +191,15 @@ HPO_descendants <- stack(termAncestors) %>%
 ## Data from phenotype_annotation.tab ----
 ###############################################################################@
 
+hpdl <- readLines(file.path(sdir, "phenotype_annotation.tab"))
+hpdl <- c(
+   hpdl[1][str_detect(hpdl[1], regex("^#"), negate=TRUE)],
+   hpdl[-1]
+)
 hpd <- read_tsv(
-   file=file.path(sdir, "phenotype_annotation.tab"),
+   hpdl,
    col_types=paste(rep("c", 14), collapse=""),
-   col_names=FALSE
+   col_names=FALSE,
 )
 
 ## _+ diseaseHP ----
