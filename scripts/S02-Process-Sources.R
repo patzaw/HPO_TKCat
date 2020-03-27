@@ -251,6 +251,10 @@ HPO_diseases <- HPO_diseaseSynonyms %>%
 ## Writing tables ----
 ###############################################################################@
 
+rm_tr_spaces <- function(x){
+   stringr::str_remove(x, stringr::regex("^ *")) %>%
+      stringr::str_remove(stringr::regex(" *$"))
+}
 
 message("Writing tables...")
 message(Sys.time())
@@ -259,8 +263,15 @@ dir.create(ddir)
 toSave <- grep("^HPO[_]", ls(), value=T)
 for(f in toSave){
    message(paste("   Writing", f))
+   tv <- get(f)
+   for(cn in colnames(tv)){
+      if(class(pull(tv, !!cn))=="character"){
+         tv[, cn] <- rm_tr_spaces(pull(tv, !!cn))
+      }
+   }
+   tv <- distinct(tv)
    write_tsv(
-      get(f),
+      tv,
       path=file.path(ddir, paste(f, ".txt", sep=""))
    )
 }
