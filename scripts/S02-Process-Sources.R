@@ -4,7 +4,7 @@ library(tidyverse)
 sdir <- here("sources")
 ddir <- here("data")
 
-source(here("../00-Utils/writeLastUpdate.R"))
+source(here("scripts/writeLastUpdate.R"))
 
 ###############################################################################@
 ## Source information ----
