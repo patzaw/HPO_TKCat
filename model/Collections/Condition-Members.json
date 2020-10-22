@@ -1,10 +1,16 @@
 {
+	"$schema":"TKCat_Condition_collection_1.0",
+	"$id":"HPO_conditions_1.0",
 	"collection":"Condition",
 	"resource":"HPO",
 	"tables":[
 		{
 			"name":"HPO_hp",
 			"fields":{
+				"condition": {
+					"static":true,
+					"value":"Phenotype"
+				},
 				"source": {
 					"static":true,
 					"value":"HP"
@@ -18,6 +24,10 @@
 		{
 			"name":"HPO_diseases",
 			"fields":{
+				"condition": {
+					"static":true,
+					"value":"Disease"
+				},
 				"source": {
 					"static":false,
 					"value":"db"
