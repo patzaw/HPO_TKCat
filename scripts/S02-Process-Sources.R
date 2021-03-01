@@ -198,7 +198,7 @@ hpdl <- c(
 )
 hpd <- read_tsv(
    hpdl,
-   col_types=paste(rep("c", 14), collapse=""),
+   col_types=paste(rep("c", 15), collapse=""),
    col_names=FALSE,
 )
 
@@ -210,8 +210,6 @@ HPO_diseaseHP <- hpd %>%
       # id=id %>% as.character(),
       hp=hp %>% str_remove("^HP[:]")
    )
-   
-   HPO_diseaseHP$hp <- sub("^HP[:]", "", HPO_diseaseHP$hp)
    
 ## _+ diseaseSynonyms ----
 diseases <- unique(hpd[,1:3])
