@@ -197,7 +197,7 @@ hpdl <- c(
    hpdl[-1]
 )
 hpd <- read_tsv(
-   hpdl,
+   I(hpdl),
    col_types=paste(rep("c", 15), collapse=""),
    col_names=FALSE,
 )
@@ -270,7 +270,8 @@ for(f in toSave){
    tv <- distinct(tv)
    write_tsv(
       tv,
-      file=file.path(ddir, paste(f, ".txt", sep=""))
+      file=file.path(ddir, paste(f, ".txt", sep="")),
+      quote="all", na="<NA>"
    )
 }
 message(Sys.time())
