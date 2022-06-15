@@ -35,12 +35,14 @@ HPO_sourceFiles <- HPO_sourceFiles %>%
    select(url, current)
 
 ## _+ Basic information ----
-starts <- which(obo=="[Term]")
+# starts <- which(obo=="[Term]")
+starts <- grep("^[[][[:alpha:]]+[]]", obo)
 ends <- c(starts[-1]-1, length(obo))
 hpDef <- do.call(bind_rows, apply(
    data.frame(starts, ends),
    1,
    function(x){
+      type <- obo[x[1]]
       termDesc <- obo[(x[1]+1):(x[2]-1)]
       ##
       fn <- "^id: "
@@ -71,12 +73,14 @@ hpDef <- do.call(bind_rows, apply(
       altId <- paste(unique(c(id, altId)), collapse=", ")
       ##
       return(tibble(
+         type=type,
          id=id, name=name, syn = syn, def=def,
          parent=parent,
          altId=altId
       ))
    }
 ))
+hpDef <- hpDef %>% filter(type=="[Term]")
 altId <- hpDef %>%
    select(id, altId) %>%
    unique()
