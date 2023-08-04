@@ -72,16 +72,31 @@ hpDef <- do.call(bind_rows, apply(
       altId <- sub(fn, "", grep(fn, termDesc, value=T))
       altId <- paste(unique(c(id, altId)), collapse=", ")
       ##
+      fn <- "^is_obsolete: "
+      obsolete <- sub(fn, "", grep(fn, termDesc, value=T))
+      if(length(obsolete)==0){
+         obsolete <- FALSE
+      }else{
+         obsolete <- TRUE
+      }
+      ##
+      fn <- "^replaced_by: "
+      replacedBy <- sub(fn, "", grep(fn, termDesc, value=T))
+      replacedBy <- paste(replacedBy, collapse=", ")
+      ##
       return(tibble(
          type=type,
          id=id, name=name, syn = syn, def=def,
          parent=parent,
-         altId=altId
+         altId=altId,
+         obsolete=obsolete,
+         replacedBy=replacedBy
       ))
    }
 ))
 hpDef <- hpDef %>% filter(type=="[Term]")
 altId <- hpDef %>%
+   filter(!obsolete) %>% 
    select(id, altId) %>%
    unique()
 parentId <- hpDef %>%
@@ -93,6 +108,7 @@ hpDef <- hpDef %>%
 
 ## _+ Main HP table ----
 HPO_hp <- hpDef %>%
+   filter(!obsolete) %>% 
    select(id, name, def) %>%
    unique() %>%
    rename("description"="def") %>%
@@ -104,6 +120,33 @@ HPO_hp <- hpDef %>%
          str_remove("^\"")
    ) %>%
    filter(!duplicated(id))
+
+## _+ Obsolete HP ----
+HPO_obsoleteHP <- hpDef %>%
+   filter(obsolete) %>% 
+   select(id, name, def, replacedBy) %>%
+   unique() %>%
+   rename("description"="def") %>%
+   mutate(
+      id=id %>% str_remove("^HP[:]"),
+      description=description %>%
+         str_replace_all("\t|\n|\r|\\\\", " ") %>%
+         str_remove('" [^"]*$') %>%
+         str_remove("^\"")
+   ) %>%
+   filter(!duplicated(id))
+HPO_replacedHP <- HPO_obsoleteHP$replacedBy %>% 
+   strsplit(", ") %>% 
+   setNames(HPO_obsoleteHP$id) %>% 
+   stack() %>% 
+   as_tibble() %>% 
+   mutate_all(as.character) %>% 
+   rename(current="values", obsolete="ind") %>% 
+   mutate(current=str_remove(current, "HP:"))
+HPO_obsoleteHP <- HPO_obsoleteHP %>% 
+   select(-replacedBy) %>% 
+   distinct()
+
 
 ## _+ Synonyms ----
 HPO_synonyms <- hpDef %>%
@@ -117,7 +160,7 @@ HPO_synonyms <- hpDef %>%
          str_remove('" [^"]*$') %>%
          str_remove('^"')
    ) %>%
-   filter(!is.na(syn)) %>%
+   filter(!is.na(syn) & id %in% HPO_hp$id) %>%
    rename("synonym"="syn")
 
 ## _+ Parents ----
@@ -192,54 +235,86 @@ HPO_descendants <- stack(termAncestors) %>%
    )
 
 ###############################################################################@
-## Data from phenotype_annotation.tab ----
+## Data from phenotype.hpoa ----
 ###############################################################################@
 
-hpdl <- readLines(file.path(sdir, "phenotype_annotation.tab"))
-hpdl <- c(
-   hpdl[1][str_detect(hpdl[1], regex("^#"), negate=TRUE)],
-   hpdl[-1]
-)
 hpd <- read_tsv(
-   I(hpdl),
-   col_types=paste(rep("c", 15), collapse=""),
-   col_names=FALSE,
-)
+   file.path(sdir, "phenotype.hpoa"),
+   comment = "#",
+   col_types=paste(rep("c", 12), collapse="")
+) %>%
+   mutate(
+      hp=str_remove(hpo_id, ".*[:]"),
+      hpp=str_remove(hpo_id, "[:].*"),
+      db=str_remove(database_id, "[:].*"),
+      id=str_remove(database_id, ".*[:]")
+   ) %>%
+   rename(freq_from_hpo=frequency)
 
 ## _+ diseaseHP ----
-HPO_diseaseHP <- hpd %>%
-   select(X1, X2, X5) %>%
-   rename("db"="X1", "id"="X2", "hp"="X5") %>%
+hpfreq <- hpd %>% 
+   select(freq_from_hpo) %>%
+   mutate(id=str_remove(freq_from_hpo, "HP:")) %>% 
+   distinct() %>% 
+   left_join(
+      HPO_hp %>% 
+      filter(
+         id %in% str_remove(
+            unique(grep("HP:", hpd$freq_from_hpo, value=T)),
+            "HP:"
+         )
+      ) %>% 
+      select(id, name),
+      by=c("id"="id")
+   ) %>% 
+   mutate(freq_num= unlist(lapply(freq_from_hpo, function(x){
+         toRet <- try(as.numeric(eval(parse(text=x))), silent=TRUE)
+         if(inherits(toRet, "try-error")){
+            if(length(grep("%", x))>0){
+               toRet <- as.numeric(str_remove(x, "%"))/100
+            }else{
+               toRet <- NA
+            }
+         }
+         return(toRet)
+   }))) %>% 
+   mutate(name=ifelse(
+      !is.na(name), name,
+      case_when(
+         freq_num == 0 ~ "Excluded",
+         freq_num < 0.05 ~ "Very rare",
+         freq_num < 0.30 ~ "Occasional",
+         freq_num < 0.80 ~ "Frequent",
+         freq_num < 1.00 ~ "Very frequent",
+         freq_num == 1.00 ~ "Obligate"
+      )
+   )) %>% 
    mutate(
-      # id=id %>% as.character(),
-      hp=hp %>% str_remove("^HP[:]")
+      freq_order=as.integer(c(
+         "Excluded"=1,
+         "Very rare"=2,
+         "Occasional"=3,
+         "Frequent"=4,
+         "Very frequent"=5,
+         "Obligate"=6
+      )[name])
+   ) %>% 
+   select(
+      freq_from_hpo,
+      freq_num,
+      freq_category=name,
+      freq_order
    )
+HPO_diseaseHP <- hpd %>% 
+   select(db, id, hp, freq_from_hpo) %>% 
+   distinct() %>% 
+   left_join(hpfreq, by="freq_from_hpo")
    
 ## _+ diseaseSynonyms ----
-diseases <- unique(hpd[,1:3])
-
 HPO_diseaseSynonyms <- hpd %>%
-   select(X1, X2, X3) %>%
-   apply(
-      1, function(x){
-         names(x) <- c()
-         syns <- unlist(strsplit(x[3], split=";;"))
-         syns <- sub(
-            paste0('^ *[%#]?', x[2], ' +'),
-            "",
-            syns
-         )
-         pref <- c(TRUE, rep(FALSE, length(syns)-1))
-         toRet <- tibble(
-            db=x[1],
-            id=x[2] %>% str_remove_all(" "),
-            synonym=syns,
-            preferred=pref
-         )
-         return(toRet)
-      }
-   ) %>%
-   bind_rows() %>%
+   select(db, id, synonym=disease_name) %>%
+   distinct() %>%
+   mutate(preferred=!duplicated(paste(db, id))) %>% 
    unique()
 
 ## _+ Diseases
@@ -282,3 +357,15 @@ message(Sys.time())
 message("... Done\n")
 
 writeLastUpdate()
+
+###############################################################################@
+## Data model ----
+###############################################################################@
+# library(TKCat)
+# dmf <- here("model/HPO.json")
+# dm <- read_json_data_model(dmf)
+# write_json_data_model(dm, dmf)
+# plot(dm) %>%
+#    visNetwork::visOptions(width="2000px", height="1000px") %>%
+#    htmlwidgets::saveWidget(file=stringr::str_replace(dmf, "[.]json$", ".html"))
+# 

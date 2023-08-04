@@ -1,5 +1,19 @@
 <!----------------------------------------------------------------------------->
 <!----------------------------------------------------------------------------->
+## Version 0.20 -- Release notes
+
+### Data source changes
+
+   - phenotype.hpoa instead of phenotype_annotation.tab
+   - much less synonyms
+
+### Data model changes
+
+   - phenotype frequency included
+   - obsolete id isolated
+
+<!----------------------------------------------------------------------------->
+<!----------------------------------------------------------------------------->
 ## Version 0.13 -- Release notes
 
 ### Implementation changes
