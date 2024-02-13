@@ -40,8 +40,11 @@ fmb <- tbkmh$add_collibra_metadata(
       "Regulatory approval"
    ),
    `Primary Use Case`="What are subforms of a disease and relate it to genetics, pharmacology and drugs associated to it? Whata are specific phenotypes associated with (rare) diseases of interest?",
-   `Restrictions`="None",
+   `Restrictions`="No Restrictions",
+   `Restrictions summary`="None",
+   `License type`="Open access with standard license agreement e.g. Creative Commons",
    `License`="Public access",
+   `Data Protection Category`="Non-personal data",
    `Source of data`="Medical ontology of diseases",
    `Nature of data`="Disease, Phenotype and Condition",
    `Refresh Frequency`=as.character(NA),
