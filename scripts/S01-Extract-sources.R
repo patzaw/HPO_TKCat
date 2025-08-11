@@ -1,5 +1,7 @@
 library(here)
 
+options(timeout = 3000)
+
 source(here("scripts/downloadSourceFiles.R"))
 
 srcDir <- here("sources")
