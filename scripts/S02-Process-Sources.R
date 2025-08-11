@@ -4,8 +4,6 @@ library(tidyverse)
 sdir <- here("sources")
 ddir <- here("data")
 
-source(here("scripts/writeLastUpdate.R"))
-
 ###############################################################################@
 ## Source information ----
 ###############################################################################@
@@ -13,7 +11,7 @@ source(here("scripts/writeLastUpdate.R"))
 sfi <- read_tsv(
    file.path(sdir, "ARCHIVES/ARCHIVES.txt")
 )
-HPO_sourceFiles <- sfi %>%
+HPO_Source_files <- sfi %>%
    filter(inUse) %>%
    mutate(current=current %>% as.Date() %>% as.character())
 
@@ -30,8 +28,8 @@ oboDate <- grep("^data[-]version[:]", obo, value=TRUE) %>%
    as.POSIXct() %>%
    as.Date() %>%
    as.character()
-HPO_sourceFiles[which(HPO_sourceFiles$file=="hp.obo"), "current"] <- oboDate
-HPO_sourceFiles <- HPO_sourceFiles %>%
+HPO_Source_files[which(HPO_Source_files$file=="hp.obo"), "current"] <- oboDate
+HPO_Source_files <- HPO_Source_files %>%
    select(url, current)
 
 ## _+ Basic information ----
@@ -107,7 +105,7 @@ hpDef <- hpDef %>%
    unique()
 
 ## _+ Main HP table ----
-HPO_hp <- hpDef %>%
+HPO_HP <- hpDef %>%
    filter(!obsolete) %>% 
    select(id, name, def) %>%
    unique() %>%
@@ -122,7 +120,7 @@ HPO_hp <- hpDef %>%
    filter(!duplicated(id))
 
 ## _+ Obsolete HP ----
-HPO_obsoleteHP <- hpDef %>%
+HPO_Obsolete_HP <- hpDef %>%
    filter(obsolete) %>% 
    select(id, name, def, replacedBy) %>%
    unique() %>%
@@ -135,21 +133,21 @@ HPO_obsoleteHP <- hpDef %>%
          str_remove("^\"")
    ) %>%
    filter(!duplicated(id))
-HPO_replacedHP <- HPO_obsoleteHP$replacedBy %>% 
+HPO_Replaced_HP <- HPO_Obsolete_HP$replacedBy %>% 
    strsplit(", ") %>% 
-   setNames(HPO_obsoleteHP$id) %>% 
+   setNames(HPO_Obsolete_HP$id) %>% 
    stack() %>% 
    as_tibble() %>% 
    mutate_all(as.character) %>% 
    rename(current="values", obsolete="ind") %>% 
    mutate(current=str_remove(current, "HP:"))
-HPO_obsoleteHP <- HPO_obsoleteHP %>% 
+HPO_Obsolete_HP <- HPO_Obsolete_HP %>% 
    select(-replacedBy) %>% 
    distinct()
 
 
 ## _+ Synonyms ----
-HPO_synonyms <- hpDef %>%
+HPO_Synonyms <- hpDef %>%
    select(id, syn) %>%
    unique() %>%
    mutate(
@@ -160,13 +158,13 @@ HPO_synonyms <- hpDef %>%
          str_remove('" [^"]*$') %>%
          str_remove('^"')
    ) %>%
-   filter(!is.na(syn) & id %in% HPO_hp$id) %>%
+   filter(!is.na(syn) & id %in% HPO_HP$id) %>%
    rename("synonym"="syn")
 
 ## _+ Parents ----
 parentList <- strsplit(parentId$parent, ", ")
 names(parentList) <- parentId$id
-HPO_parents <- stack(parentList) %>%
+HPO_Parents <- stack(parentList) %>%
    as_tibble() %>%
    rename("parent"="values", "id"="ind") %>%
    mutate(
@@ -181,7 +179,7 @@ HPO_parents <- stack(parentList) %>%
 ## _+ Alternative ID ----
 altIdList <- strsplit(altId$altId, ", ")
 names(altIdList) <- altId$id
-HPO_altId <- stack(altIdList) %>%
+HPO_Alternative_ID <- stack(altIdList) %>%
    as_tibble() %>%
    rename("alt"="values", "id"="ind") %>%
    mutate(
@@ -210,21 +208,21 @@ getAncestors <- function(id){
    return(list(parents=unique(parents), level=level))
 }
 
-termParents <- split(HPO_parents$parent, HPO_parents$id)
+termParents <- split(HPO_Parents$parent, HPO_Parents$id)
 termAncestors <- lapply(
-   unique(HPO_hp$id),
+   unique(HPO_HP$id),
    getAncestors
 )
-names(termAncestors) <- unique(HPO_hp$id)
+names(termAncestors) <- unique(HPO_HP$id)
 
-HPO_hp <- HPO_hp %>%
+HPO_HP <- HPO_HP %>%
    mutate(
-      level=unlist(lapply(termAncestors, function(x) x$level))[HPO_hp$id]
+      level=unlist(lapply(termAncestors, function(x) x$level))[HPO_HP$id]
    )
 
 termAncestors <- lapply(termAncestors, function(x) x$parents)
-termAncestors <- termAncestors[HPO_hp$id]
-HPO_descendants <- stack(termAncestors) %>%
+termAncestors <- termAncestors[HPO_HP$id]
+HPO_Descendants <- stack(termAncestors) %>%
    as_tibble() %>%
    mutate_all(as.character) %>%
    bind_rows(
@@ -257,7 +255,7 @@ hpfreq <- hpd %>%
    mutate(id=str_remove(freq_from_hpo, "HP:")) %>% 
    distinct() %>% 
    left_join(
-      HPO_hp %>% 
+      HPO_HP %>% 
       filter(
          id %in% str_remove(
             unique(grep("HP:", hpd$freq_from_hpo, value=T)),
@@ -305,20 +303,20 @@ hpfreq <- hpd %>%
       freq_category=name,
       freq_order
    )
-HPO_diseaseHP <- hpd %>% 
+HPO_Disease_HP <- hpd %>% 
    select(db, id, hp, freq_from_hpo) %>% 
    distinct() %>% 
    left_join(hpfreq, by="freq_from_hpo")
    
 ## _+ diseaseSynonyms ----
-HPO_diseaseSynonyms <- hpd %>%
+HPO_Disease_synonyms <- hpd %>%
    select(db, id, synonym=disease_name) %>%
    distinct() %>%
    mutate(preferred=!duplicated(paste(db, id))) %>% 
    unique()
 
 ## _+ Diseases
-HPO_diseases <- HPO_diseaseSynonyms %>%
+HPO_Diseases <- HPO_Disease_synonyms %>%
    filter(preferred) %>%
    select(db, id, synonym) %>%
    rename("label"="synonym") %>%
@@ -349,14 +347,12 @@ for(f in toSave){
    tv <- distinct(tv)
    write_tsv(
       tv,
-      file=file.path(ddir, paste(f, ".txt", sep="")),
+      file=file.path(ddir, paste(sub("^HPO[_]", "", f), ".txt", sep="")),
       quote="all", na="<NA>"
    )
 }
 message(Sys.time())
 message("... Done\n")
-
-writeLastUpdate()
 
 ###############################################################################@
 ## Data model ----

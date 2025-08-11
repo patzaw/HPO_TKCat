@@ -1,6 +1,6 @@
 {
-  "HPO_hp": {
-    "tableName": ["HPO_hp"],
+  "HP": {
+    "tableName": ["HP"],
     "fields": [
       {
         "name": "id",
@@ -46,8 +46,8 @@
       "comment": ["Human phenotypes (HP)"]
     }
   },
-  "HPO_altId": {
-    "tableName": ["HPO_altId"],
+  "Alternative_ID": {
+    "tableName": ["Alternative_ID"],
     "fields": [
       {
         "name": "id",
@@ -67,7 +67,7 @@
     "primaryKey": [],
     "foreignKeys": [
       {
-        "refTable": ["HPO_hp"],
+        "refTable": ["HP"],
         "key": [
           {
             "from": "id",
@@ -90,8 +90,8 @@
       "comment": ["Alternative HP identifiers"]
     }
   },
-  "HPO_sourceFiles": {
-    "tableName": ["HPO_sourceFiles"],
+  "Source_files": {
+    "tableName": ["Source_files"],
     "fields": [
       {
         "name": "url",
@@ -123,8 +123,8 @@
       "comment": ["Files from which data were extracted"]
     }
   },
-  "HPO_diseases": {
-    "tableName": ["HPO_diseases"],
+  "Diseases": {
+    "tableName": ["Diseases"],
     "fields": [
       {
         "name": "db",
@@ -163,8 +163,8 @@
       "comment": ["Diseases"]
     }
   },
-  "HPO_diseaseHP": {
-    "tableName": ["HPO_diseaseHP"],
+  "Disease_HP": {
+    "tableName": ["Disease_HP"],
     "fields": [
       {
         "name": "db",
@@ -219,7 +219,7 @@
     "primaryKey": [],
     "foreignKeys": [
       {
-        "refTable": ["HPO_hp"],
+        "refTable": ["HP"],
         "key": [
           {
             "from": "hp",
@@ -229,7 +229,7 @@
         "cardinality": [0, -1, 1, 1]
       },
       {
-        "refTable": ["HPO_diseases"],
+        "refTable": ["Diseases"],
         "key": [
           {
             "from": "db",
@@ -260,8 +260,8 @@
       "comment": ["HP presented by diseases"]
     }
   },
-  "HPO_diseaseSynonyms": {
-    "tableName": ["HPO_diseaseSynonyms"],
+  "Disease_synonyms": {
+    "tableName": ["Disease_synonyms"],
     "fields": [
       {
         "name": "db",
@@ -295,7 +295,7 @@
     "primaryKey": [],
     "foreignKeys": [
       {
-        "refTable": ["HPO_diseases"],
+        "refTable": ["Diseases"],
         "key": [
           {
             "from": "db",
@@ -322,8 +322,8 @@
       "comment": ["Disease synonyms"]
     }
   },
-  "HPO_parents": {
-    "tableName": ["HPO_parents"],
+  "Parents": {
+    "tableName": ["Parents"],
     "fields": [
       {
         "name": "id",
@@ -343,7 +343,7 @@
     "primaryKey": [],
     "foreignKeys": [
       {
-        "refTable": ["HPO_hp"],
+        "refTable": ["HP"],
         "key": [
           {
             "from": "id",
@@ -353,7 +353,7 @@
         "cardinality": [0, -1, 1, 1]
       },
       {
-        "refTable": ["HPO_hp"],
+        "refTable": ["HP"],
         "key": [
           {
             "from": "parent",
@@ -380,8 +380,8 @@
       "comment": ["Direct parents of human phenotypes"]
     }
   },
-  "HPO_descendants": {
-    "tableName": ["HPO_descendants"],
+  "Descendants": {
+    "tableName": ["Descendants"],
     "fields": [
       {
         "name": "id",
@@ -401,7 +401,7 @@
     "primaryKey": [],
     "foreignKeys": [
       {
-        "refTable": ["HPO_hp"],
+        "refTable": ["HP"],
         "key": [
           {
             "from": "id",
@@ -411,7 +411,7 @@
         "cardinality": [0, -1, 1, 1]
       },
       {
-        "refTable": ["HPO_hp"],
+        "refTable": ["HP"],
         "key": [
           {
             "from": "descendant",
@@ -438,8 +438,8 @@
       "comment": ["Indirect descendants of human phenotypes"]
     }
   },
-  "HPO_synonyms": {
-    "tableName": ["HPO_synonyms"],
+  "Synonyms": {
+    "tableName": ["Synonyms"],
     "fields": [
       {
         "name": "id",
@@ -466,7 +466,7 @@
     "primaryKey": [],
     "foreignKeys": [
       {
-        "refTable": ["HPO_hp"],
+        "refTable": ["HP"],
         "key": [
           {
             "from": "id",
@@ -484,8 +484,8 @@
       "comment": ["Synonyms of human phenotypes"]
     }
   },
-  "HPO_obsoleteHP": {
-    "tableName": ["HPO_obsoleteHP"],
+  "Obsolete_HP": {
+    "tableName": ["Obsolete_HP"],
     "fields": [
       {
         "name": "id",
@@ -524,8 +524,8 @@
       "comment": ["Human phenotypes (HP)"]
     }
   },
-  "HPO_replacedHP": {
-    "tableName": ["HPO_replacedHP"],
+  "Replaced_HP": {
+    "tableName": ["Replaced_HP"],
     "fields": [
       {
         "name": "obsolete",
@@ -542,9 +542,10 @@
         "comment": "Current HP identifier"
       }
     ],
+    "primaryKey": [],
     "foreignKeys": [
       {
-        "refTable": ["HPO_obsoleteHP"],
+        "refTable": ["Obsolete_HP"],
         "key": [
           {
             "from": "obsolete",
@@ -554,7 +555,7 @@
         "cardinality": [0, -1, 1, 1]
       },
       {
-        "refTable": ["HPO_hp"],
+        "refTable": ["HP"],
         "key": [
           {
             "from": "current",

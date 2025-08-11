@@ -5,7 +5,7 @@
 	"resource":"HPO",
 	"tables":[
 		{
-			"name":"HPO_hp",
+			"name":"HP",
 			"fields":{
 				"condition": {
 					"static":true,
@@ -22,7 +22,7 @@
 			}
 		},
 		{
-			"name":"HPO_diseases",
+			"name":"Diseases",
 			"fields":{
 				"condition": {
 					"static":true,

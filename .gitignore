@@ -6,3 +6,4 @@ sources
 *.mwb.bak
 .lastestUpdates.txt
 TBKM
+model/*_files
