@@ -33,12 +33,7 @@
     ],
     "primaryKey": ["id"],
     "foreignKeys": [],
-    "indexes": [
-      {
-        "fields": ["id"],
-        "unique": [true]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [-167],
       "y": [-177],
@@ -77,12 +72,7 @@
         "cardinality": [0, -1, 1, 1]
       }
     ],
-    "indexes": [
-      {
-        "fields": ["id"],
-        "unique": [false]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [-93],
       "y": [-43],
@@ -110,12 +100,7 @@
     ],
     "primaryKey": ["url"],
     "foreignKeys": [],
-    "indexes": [
-      {
-        "fields": ["url"],
-        "unique": [true]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [262],
       "y": [-336],
@@ -150,12 +135,7 @@
     ],
     "primaryKey": ["db", "id"],
     "foreignKeys": [],
-    "indexes": [
-      {
-        "fields": ["db", "id"],
-        "unique": [true]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [320],
       "y": [-170],
@@ -243,16 +223,7 @@
         "cardinality": [0, -1, 1, 1]
       }
     ],
-    "indexes": [
-      {
-        "fields": ["hp"],
-        "unique": [false]
-      },
-      {
-        "fields": ["db", "id"],
-        "unique": [false]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [75],
       "y": [-172],
@@ -309,12 +280,7 @@
         "cardinality": [0, -1, 1, 1]
       }
     ],
-    "indexes": [
-      {
-        "fields": ["db", "id"],
-        "unique": [false]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [321],
       "y": [-24],
@@ -363,16 +329,7 @@
         "cardinality": [0, -1, 1, 1]
       }
     ],
-    "indexes": [
-      {
-        "fields": ["id"],
-        "unique": [false]
-      },
-      {
-        "fields": ["parent"],
-        "unique": [false]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [-328],
       "y": [-331],
@@ -421,16 +378,7 @@
         "cardinality": [0, -1, 1, 1]
       }
     ],
-    "indexes": [
-      {
-        "fields": ["id"],
-        "unique": [false]
-      },
-      {
-        "fields": ["descendant"],
-        "unique": [false]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [-101],
       "y": [-360],
@@ -511,12 +459,7 @@
     ],
     "primaryKey": ["id"],
     "foreignKeys": [],
-    "indexes": [
-      {
-        "fields": ["id"],
-        "unique": [true]
-      }
-    ],
+    "indexes": [],
     "display": {
       "x": [-448],
       "y": [-50],
