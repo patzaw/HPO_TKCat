@@ -236,11 +236,13 @@ HPO_Descendants <- stack(termAncestors) %>%
 ## Data from phenotype.hpoa ----
 ###############################################################################@
 
-hpd <- read_tsv(
-   file.path(sdir, "phenotype.hpoa"),
-   comment = "#",
-   col_types=paste(rep("c", 12), collapse="")
-) %>%
+
+hpd <- read_lines(file.path(sdir, "phenotype.hpoa")) %>%
+  str_subset("^#", negate = TRUE) %>%
+  I() %>%
+  read_tsv(
+     col_types=paste(rep("c", 12), collapse="")
+  ) %>%
    mutate(
       hp=str_remove(hpo_id, ".*[:]"),
       hpp=str_remove(hpo_id, "[:].*"),
